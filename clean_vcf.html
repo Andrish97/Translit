@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Czyściciel VCF</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .card {
+    background: #1a1d27;
+    border: 1px solid #2d3148;
+    border-radius: 20px;
+    padding: 48px;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.5);
+  }
+
+  h1 { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #64748b; margin-bottom: 36px; }
+
+  .drop-zone {
+    border: 2px dashed #2d3148;
+    border-radius: 14px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.hover { border-color: #f59e0b; background: rgba(245,158,11,.04); }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-icon { font-size: 40px; margin-bottom: 12px; display: block; }
+  .drop-label { font-size: 15px; color: #94a3b8; }
+  .drop-label strong { color: #f59e0b; }
+  .drop-hint { font-size: 12px; color: #475569; margin-top: 6px; }
+
+  .file-info {
+    display: none; align-items: center; gap: 14px;
+    background: #12151f; border: 1px solid #2d3148;
+    border-radius: 12px; padding: 16px 20px; margin-top: 16px;
+  }
+  .file-info.visible { display: flex; }
+  .file-meta { flex: 1; min-width: 0; }
+  .file-name { font-size: 14px; font-weight: 600; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-size { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .remove-btn { background: none; border: none; color: #475569; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 6px; transition: color .15s; flex-shrink: 0; }
+  .remove-btn:hover { color: #ef4444; }
+
+  /* Options */
+  .options {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 20px;
+    background: #12151f;
+    border: 1px solid #2d3148;
+    border-radius: 12px;
+  }
+  .options.visible { display: flex; }
+  .options-title {
+    font-size: 11px; color: #475569;
+    text-transform: uppercase; letter-spacing: .6px;
+    margin-bottom: 4px;
+  }
+  .opt {
+    display: flex; align-items: flex-start; gap: 10px;
+    cursor: pointer;
+  }
+  .opt input[type=checkbox] {
+    margin-top: 2px; flex-shrink: 0;
+    accent-color: #f59e0b;
+    width: 15px; height: 15px; cursor: pointer;
+  }
+  .opt-text { flex: 1; }
+  .opt-label { font-size: 13px; color: #e2e8f0; }
+  .opt-desc { font-size: 11px; color: #475569; margin-top: 2px; }
+
+  .btn {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; width: 100%; padding: 15px; border-radius: 12px;
+    border: none; font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: opacity .15s, transform .1s; margin-top: 20px;
+  }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn:not(:disabled):hover { opacity: .9; }
+  .btn:not(:disabled):active { transform: scale(.98); }
+  .btn-primary { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; }
+  .btn-download { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+
+  .status {
+    display: none; align-items: center; gap: 10px;
+    margin-top: 18px; padding: 12px 16px; border-radius: 10px;
+    font-size: 13px; font-weight: 500;
+  }
+  .status.visible { display: flex; }
+  .status.ok { background: rgba(16,185,129,.12); color: #34d399; border: 1px solid rgba(16,185,129,.2); }
+  .status.err { background: rgba(239,68,68,.12); color: #f87171; border: 1px solid rgba(239,68,68,.2); }
+
+  /* Stats */
+  .stats { display: none; gap: 12px; margin-top: 16px; }
+  .stats.visible { display: flex; }
+  .stat { flex: 1; background: #12151f; border: 1px solid #2d3148; border-radius: 10px; padding: 12px 16px; text-align: center; }
+  .stat-value { font-size: 22px; font-weight: 700; color: #f59e0b; }
+  .stat-label { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  .footer { margin-top: 32px; font-size: 11px; color: #334155; text-align: center; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Czyściciel VCF</h1>
+  <p class="subtitle">Usuwa zbędne pola Apple i naprawia format przed importem do telefonu</p>
+
+  <div class="drop-zone" id="dropZone">
+    <input type="file" accept=".vcf,.vcard" id="fileInput">
+    <span class="drop-icon">🧹</span>
+    <div class="drop-label"><strong>Wybierz plik VCF</strong> lub przeciągnij tutaj</div>
+    <div class="drop-hint">.vcf / .vcard</div>
+  </div>
+
+  <div class="file-info" id="fileInfo">
+    <span style="font-size:28px;flex-shrink:0">📄</span>
+    <div class="file-meta">
+      <div class="file-name" id="fileName"></div>
+      <div class="file-size" id="fileSize"></div>
+    </div>
+    <button class="remove-btn" id="removeBtn">✕</button>
+  </div>
+
+  <div class="options" id="options">
+    <div class="options-title">Co usunąć</div>
+
+    <label class="opt">
+      <input type="checkbox" id="opt-crlf" checked>
+      <div class="opt-text">
+        <div class="opt-label">Napraw końce linii → CRLF</div>
+        <div class="opt-desc">Standard VCF wymaga \r\n — brak tego blokuje import na wielu telefonach</div>
+      </div>
+    </label>
+
+    <label class="opt">
+      <input type="checkbox" id="opt-prodid" checked>
+      <div class="opt-text">
+        <div class="opt-label">Usuń PRODID</div>
+        <div class="opt-desc">Pole specyficzne dla Apple — niepotrzebne i czasem mylące parsery</div>
+      </div>
+    </label>
+
+    <label class="opt">
+      <input type="checkbox" id="opt-flatten" checked>
+      <div class="opt-text">
+        <div class="opt-label">Wypłaszcz item1.TEL / item1.EMAIL</div>
+        <div class="opt-desc">Android nie rozumie grupowania item. — telefony i emaile stają się niewidoczne</div>
+      </div>
+    </label>
+
+    <label class="opt">
+      <input type="checkbox" id="opt-xapple" checked>
+      <div class="opt-text">
+        <div class="opt-label">Usuń pola Apple (X-AB*, X-SOCIALPROFILE…)</div>
+        <div class="opt-desc">X-ABLabel, X-ABShowAs, X-ABADR, X-ABRELATEDNAMES, X-SOCIALPROFILE, X-MAIDENNAME itp.</div>
+      </div>
+    </label>
+
+    <label class="opt">
+      <input type="checkbox" id="opt-xother" checked>
+      <div class="opt-text">
+        <div class="opt-label">Usuń pozostałe pola X- (rozszerzenia niestandardowe)</div>
+        <div class="opt-desc">Niestandardowe rozszerzenia — ignorowane lub powodujące błędy na obcych urządzeniach</div>
+      </div>
+    </label>
+
+    <div style="border-top:1px solid #1e2235;margin:6px 0"></div>
+
+    <label class="opt">
+      <input type="checkbox" id="opt-v21">
+      <div class="opt-text">
+        <div class="opt-label" style="color:#f59e0b">📟 Tryb telefonu na guziki (VCF 2.1)</div>
+        <div class="opt-desc">Konwertuje do wersji 2.1 i zostawia tylko N, TEL, EMAIL — jedyne pola obsługiwane przez stare telefony. Zaznacz to jeśli importujesz na telefon bez dotykowego ekranu.</div>
+      </div>
+    </label>
+  </div>
+
+  <button class="btn btn-primary" id="cleanBtn" disabled>🧹 Wyczyść</button>
+
+  <div class="status" id="status"></div>
+
+  <div class="stats" id="stats">
+    <div class="stat"><div class="stat-value" id="statContacts">0</div><div class="stat-label">kontaktów</div></div>
+    <div class="stat"><div class="stat-value" id="statRemoved">0</div><div class="stat-label">usuniętych linii</div></div>
+    <div class="stat"><div class="stat-value" id="statFlattened">0</div><div class="stat-label">wypłaszczonych pól</div></div>
+  </div>
+
+  <button class="btn btn-download" id="downloadBtn" style="display:none">⬇ Pobierz oczyszczony plik</button>
+
+  <div class="footer">Działa lokalnie — żaden plik nie opuszcza Twojego komputera.</div>
+</div>
+
+<script>
+// Apple-specific X- field prefixes to remove
+const APPLE_X = /^(X-AB|X-SOCIALPROFILE|X-MAIDENNAME|X-ABADR|X-ABDATE)/i;
+
+// Fields kept in VCF 2.1 feature-phone mode
+const V21_KEEP = new Set(['N', 'TEL', 'EMAIL']);
+
+function isAppleXField(name) {
+  return APPLE_X.test(name);
+}
+
+function cleanVCF(text, opts) {
+  // Normalize line endings to LF for processing
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+
+  // Unfold continuation lines (RFC 6350)
+  const unfolded = [];
+  for (const l of lines) {
+    if (l.length && (l[0] === ' ' || l[0] === '\t') && unfolded.length) {
+      unfolded[unfolded.length - 1] += l.slice(1);
+    } else {
+      unfolded.push(l);
+    }
+  }
+
+  let contacts = 0;
+  let removedLines = 0;
+  let flattenedFields = 0;
+  const out = [];
+
+  for (const line of unfolded) {
+    const upper = line.toUpperCase().trim();
+
+    if (upper === 'BEGIN:VCARD') { contacts++; out.push(line); continue; }
+    if (upper === 'END:VCARD')   { out.push(line); continue; }
+    if (!line.trim())            { continue; }
+
+    // Parse field name (handle item. group prefix)
+    const m = line.match(/^(item\d+\.)?([A-Z][A-Z0-9-]*)(;|:)/i);
+    const group     = m ? m[1] || '' : '';
+    const rawName   = m ? m[2] : '';
+    const fieldName = rawName.toUpperCase();
+
+    // ── VCF 2.1 feature-phone mode ──────────────────────────────────────
+    if (opts.v21) {
+      // Replace VERSION line
+      if (fieldName === 'VERSION') { out.push('VERSION:2.1'); continue; }
+      // Drop everything except N, TEL, EMAIL (and BEGIN/END already handled)
+      if (!V21_KEEP.has(fieldName)) { removedLines++; continue; }
+      // Strip item. prefix if present (flatten)
+      const stripped = group ? line.slice(group.length) : line;
+      if (group) flattenedFields++;
+      // Strip type params to bare minimum: just keep TEL: or EMAIL:
+      const col = stripped.indexOf(':');
+      const value = col >= 0 ? stripped.slice(col + 1) : stripped;
+      const bare = fieldName + ':' + value;
+      out.push(bare);
+      continue;
+    }
+
+    // ── Normal mode ─────────────────────────────────────────────────────
+
+    if (opts.prodid && fieldName === 'PRODID') { removedLines++; continue; }
+
+    if (opts.xapple && isAppleXField(fieldName)) { removedLines++; continue; }
+
+    if (opts.xother && fieldName.startsWith('X-') && !isAppleXField(fieldName)) {
+      removedLines++; continue;
+    }
+
+    if (opts.flatten && group) {
+      out.push(line.slice(group.length));
+      flattenedFields++;
+      continue;
+    }
+
+    out.push(line);
+  }
+
+  const eol = opts.crlf ? '\r\n' : '\n';
+  let result = out.join(eol);
+  if (!result.endsWith(eol)) result += eol;
+
+  return { result, contacts, removedLines, flattenedFields };
+}
+
+// ── UI ──────────────────────────────────────────────────────────────────────
+
+let currentFile = null;
+let outputBlob  = null;
+let outputName  = '';
+
+const dropZone   = document.getElementById('dropZone');
+const fileInput  = document.getElementById('fileInput');
+const fileInfo   = document.getElementById('fileInfo');
+const fileName   = document.getElementById('fileName');
+const fileSize   = document.getElementById('fileSize');
+const removeBtn  = document.getElementById('removeBtn');
+const cleanBtn   = document.getElementById('cleanBtn');
+const downloadBtn= document.getElementById('downloadBtn');
+const statusEl   = document.getElementById('status');
+const statsEl    = document.getElementById('stats');
+const optionsEl  = document.getElementById('options');
+
+function formatSize(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+  return (n/1048576).toFixed(1) + ' MB';
+}
+
+function setFile(f) {
+  currentFile = f;
+  fileName.textContent = f.name;
+  fileSize.textContent = formatSize(f.size);
+  fileInfo.classList.add('visible');
+  optionsEl.classList.add('visible');
+  cleanBtn.disabled = false;
+  reset();
+}
+
+function clearFile() {
+  currentFile = null;
+  fileInput.value = '';
+  fileInfo.classList.remove('visible');
+  optionsEl.classList.remove('visible');
+  cleanBtn.disabled = true;
+  reset();
+}
+
+function reset() {
+  outputBlob = null;
+  statusEl.className = 'status';
+  statsEl.classList.remove('visible');
+  downloadBtn.style.display = 'none';
+}
+
+function showStatus(msg, type) {
+  statusEl.textContent = (type === 'ok' ? '✓ ' : '✕ ') + msg;
+  statusEl.className = `status visible ${type}`;
+}
+
+function getOpts() {
+  return {
+    crlf:    document.getElementById('opt-crlf').checked,
+    prodid:  document.getElementById('opt-prodid').checked,
+    flatten: document.getElementById('opt-flatten').checked,
+    xapple:  document.getElementById('opt-xapple').checked,
+    xother:  document.getElementById('opt-xother').checked,
+    v21:     document.getElementById('opt-v21').checked,
+  };
+}
+
+// When v21 mode toggled, force-check crlf and disable other options
+document.getElementById('opt-v21').addEventListener('change', function() {
+  const other = ['opt-prodid','opt-flatten','opt-xapple','opt-xother'];
+  if (this.checked) {
+    document.getElementById('opt-crlf').checked = true;
+    other.forEach(id => {
+      document.getElementById(id).checked = false;
+      document.getElementById(id).disabled = true;
+    });
+  } else {
+    other.forEach(id => { document.getElementById(id).disabled = false; });
+  }
+});
+
+fileInput.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
+removeBtn.addEventListener('click', clearFile);
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('hover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('hover');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+
+cleanBtn.addEventListener('click', () => {
+  if (!currentFile) return;
+  reset();
+  cleanBtn.disabled = true;
+  cleanBtn.textContent = '⏳ Przetwarzam…';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const { result, contacts, removedLines, flattenedFields } = cleanVCF(e.target.result, getOpts());
+
+      outputBlob = new Blob([result], { type: 'text/vcard;charset=utf-8' });
+      outputName = currentFile.name.replace(/(\.[^.]+)$/, '_clean$1');
+
+      document.getElementById('statContacts').textContent  = contacts;
+      document.getElementById('statRemoved').textContent   = removedLines;
+      document.getElementById('statFlattened').textContent = flattenedFields;
+      statsEl.classList.add('visible');
+
+      showStatus(`Gotowe — usunięto ${removedLines} zbędnych linii, wypłaszczono ${flattenedFields} pól.`, 'ok');
+      downloadBtn.style.display = 'flex';
+    } catch(err) {
+      showStatus('Błąd: ' + err.message, 'err');
+    }
+    cleanBtn.disabled = false;
+    cleanBtn.textContent = '🧹 Wyczyść';
+  };
+  reader.onerror = () => {
+    showStatus('Nie można odczytać pliku.', 'err');
+    cleanBtn.disabled = false;
+    cleanBtn.textContent = '🧹 Wyczyść';
+  };
+  reader.readAsText(currentFile, 'utf-8');
+});
+
+downloadBtn.addEventListener('click', () => {
+  if (!outputBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(outputBlob);
+  a.download = outputName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+});
+</script>
+</body>
+</html>
