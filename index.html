@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Transliterator VCF — ukraiński → łacina</title>
+<title>Transliterator — ukraiński → łacina</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -13,7 +13,7 @@
     color: #e2e8f0;
     min-height: 100vh;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     padding: 24px;
   }
@@ -24,26 +24,14 @@
     border-radius: 20px;
     padding: 48px;
     width: 100%;
-    max-width: 720px;
+    max-width: 520px;
     box-shadow: 0 24px 64px rgba(0,0,0,.5);
-    margin: 0 auto;
   }
 
-  h1 {
-    font-size: 22px;
-    font-weight: 700;
-    color: #f8fafc;
-    margin-bottom: 4px;
-    letter-spacing: -.3px;
-  }
-  .subtitle {
-    font-size: 13px;
-    color: #64748b;
-    margin-bottom: 36px;
-  }
+  h1 { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #64748b; margin-bottom: 36px; }
   .subtitle span { color: #fbbf24; font-weight: 600; }
 
-  /* Drop zone */
   .drop-zone {
     border: 2px dashed #2d3148;
     border-radius: 14px;
@@ -53,19 +41,13 @@
     transition: border-color .2s, background .2s;
     position: relative;
   }
-  .drop-zone:hover, .drop-zone.hover {
-    border-color: #6366f1;
-    background: rgba(99,102,241,.05);
-  }
-  .drop-zone input[type=file] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-  }
+  .drop-zone:hover, .drop-zone.hover { border-color: #6366f1; background: rgba(99,102,241,.05); }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
   .drop-icon { font-size: 40px; margin-bottom: 12px; display: block; }
   .drop-label { font-size: 15px; color: #94a3b8; }
   .drop-label strong { color: #6366f1; }
   .drop-hint { font-size: 12px; color: #475569; margin-top: 6px; }
 
-  /* File info */
   .file-info {
     display: none;
     align-items: center;
@@ -79,29 +61,11 @@
   .file-info.visible { display: flex; }
   .file-icon { font-size: 28px; flex-shrink: 0; }
   .file-meta { flex: 1; min-width: 0; }
-  .file-name {
-    font-size: 14px; font-weight: 600; color: #e2e8f0;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  .file-name { font-size: 14px; font-weight: 600; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .file-size { font-size: 12px; color: #64748b; margin-top: 2px; }
-  .remove-btn {
-    background: none; border: none; color: #475569; cursor: pointer;
-    font-size: 18px; padding: 4px; border-radius: 6px;
-    transition: color .15s; flex-shrink: 0;
-  }
+  .remove-btn { background: none; border: none; color: #475569; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 6px; transition: color .15s; flex-shrink: 0; }
   .remove-btn:hover { color: #ef4444; }
 
-  /* Stats */
-  .stats { display: none; gap: 12px; margin-top: 16px; }
-  .stats.visible { display: flex; }
-  .stat {
-    flex: 1; background: #12151f; border: 1px solid #2d3148;
-    border-radius: 10px; padding: 12px 16px; text-align: center;
-  }
-  .stat-value { font-size: 22px; font-weight: 700; color: #6366f1; }
-  .stat-label { font-size: 11px; color: #64748b; margin-top: 2px; }
-
-  /* Buttons */
   .btn {
     display: flex; align-items: center; justify-content: center;
     gap: 8px; width: 100%; padding: 15px; border-radius: 12px;
@@ -114,7 +78,6 @@
   .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
   .btn-download { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
 
-  /* Status */
   .status {
     display: none; align-items: center; gap: 10px;
     margin-top: 18px; padding: 12px 16px; border-radius: 10px;
@@ -124,189 +87,19 @@
   .status.ok { background: rgba(16,185,129,.12); color: #34d399; border: 1px solid rgba(16,185,129,.2); }
   .status.err { background: rgba(239,68,68,.12); color: #f87171; border: 1px solid rgba(239,68,68,.2); }
 
-  /* Contact list */
-  .contacts-wrap {
-    display: none;
-    margin-top: 24px;
-  }
-  .contacts-wrap.visible { display: block; }
-
-  .contacts-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-  .contacts-label {
-    font-size: 11px;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: .6px;
-  }
-  .contacts-search {
-    background: #12151f;
-    border: 1px solid #2d3148;
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 13px;
-    color: #e2e8f0;
-    outline: none;
-    width: 200px;
-    transition: border-color .2s;
-  }
-  .contacts-search::placeholder { color: #475569; }
-  .contacts-search:focus { border-color: #6366f1; }
-
-  .contacts-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 520px;
-    overflow-y: auto;
-    padding-right: 4px;
-  }
-  .contacts-list::-webkit-scrollbar { width: 4px; }
-  .contacts-list::-webkit-scrollbar-thumb { background: #2d3148; border-radius: 4px; }
-
-  .contact-card {
-    background: #12151f;
-    border: 1px solid #2d3148;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: border-color .2s;
-  }
-  .contact-card:hover { border-color: #3d4168; }
-  .contact-card.expanded { border-color: #4f52a0; }
-
-  .contact-summary {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 16px;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .contact-avatar {
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; color: #fff;
-    flex-shrink: 0;
-    letter-spacing: -.5px;
-  }
-  .contact-avatar.avatar-muted {
-    background: #1e2235;
-    color: #475569;
-  }
-  .translit-badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    background: rgba(99,102,241,.25);
-    color: #a5b4fc;
-    font-size: 10px; font-weight: 700;
-    border-radius: 10px;
-    padding: 1px 6px;
-    margin-left: 7px;
-    vertical-align: middle;
-    letter-spacing: 0;
-  }
-  .contact-card.no-translit .contact-fn { color: #64748b; }
-
-  .contact-main { flex: 1; min-width: 0; }
-  .contact-fn {
-    font-size: 14px; font-weight: 600; color: #e2e8f0;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .contact-meta {
-    font-size: 12px; color: #64748b; margin-top: 2px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-
-  .contact-toggle {
-    font-size: 11px; color: #475569;
-    flex-shrink: 0; padding: 4px;
-    transition: transform .2s;
-  }
-  .contact-card.expanded .contact-toggle { transform: rotate(180deg); }
-
-  .contact-fields {
-    display: none;
-    padding: 0 16px 16px;
-    border-top: 1px solid #1e2235;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .contact-card.expanded .contact-fields { display: flex; }
-
-  .field-row {
-    display: grid;
-    grid-template-columns: 120px 1fr;
-    align-items: center;
-    gap: 10px;
-  }
-  .field-label {
-    font-size: 11px;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    font-weight: 600;
-  }
-  .field-value-static {
-    font-size: 13px;
-    color: #94a3b8;
-    padding: 8px 0;
-    word-break: break-all;
-  }
-  .field-input {
-    background: #1a1d27;
-    border: 1px solid #2d3148;
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 13px;
-    color: #e2e8f0;
-    outline: none;
-    width: 100%;
-    transition: border-color .2s, background .2s;
-    font-family: inherit;
-  }
-  .field-input:focus {
-    border-color: #6366f1;
-    background: #1e2138;
-  }
-  .field-input.modified {
-    border-color: #f59e0b;
-    background: #1e1c14;
-  }
-
-  .fields-divider {
-    font-size: 10px;
-    color: #334155;
-    text-transform: uppercase;
-    letter-spacing: .6px;
-    padding-top: 4px;
-    border-top: 1px solid #1e2235;
-    margin-top: 4px;
-  }
-
-  .footer {
-    margin-top: 32px;
-    font-size: 11px;
-    color: #334155;
-    text-align: center;
-  }
+  .footer { margin-top: 32px; font-size: 11px; color: #334155; text-align: center; }
 </style>
 </head>
 <body>
 <div class="card">
-  <h1>Transliterator VCF</h1>
+  <h1>Transliterator</h1>
   <p class="subtitle">Ukraiński → łacina &nbsp;·&nbsp; <span>KMU nr 55 / 27.01.2010</span></p>
 
   <div class="drop-zone" id="dropZone">
-    <input type="file" accept=".vcf,.vcard" id="fileInput">
-    <span class="drop-icon">📇</span>
+    <input type="file" id="fileInput">
+    <span class="drop-icon">📄</span>
     <div class="drop-label"><strong>Wybierz plik</strong> lub przeciągnij tutaj</div>
-    <div class="drop-hint">.vcf / .vcard</div>
+    <div class="drop-hint">dowolny plik tekstowy</div>
   </div>
 
   <div class="file-info" id="fileInfo">
@@ -318,22 +111,9 @@
     <button class="remove-btn" id="removeBtn" title="Usuń">✕</button>
   </div>
 
-  <div class="stats" id="stats">
-    <div class="stat"><div class="stat-value" id="statContacts">0</div><div class="stat-label">kontaktów</div></div>
-    <div class="stat"><div class="stat-value" id="statFields">0</div><div class="stat-label">przetłumaczonych pól</div></div>
-  </div>
-
   <button class="btn btn-primary" id="convertBtn" disabled>⚡ Transliteruj</button>
 
   <div class="status" id="status"></div>
-
-  <div class="contacts-wrap" id="contactsWrap">
-    <div class="contacts-header">
-      <span class="contacts-label">Podgląd i edycja kontaktów</span>
-      <input class="contacts-search" id="contactsSearch" type="text" placeholder="Szukaj kontaktu…">
-    </div>
-    <div class="contacts-list" id="contactsList"></div>
-  </div>
 
   <button class="btn btn-download" id="downloadBtn" style="display:none">⬇ Pobierz plik</button>
 
@@ -341,8 +121,6 @@
 </div>
 
 <script>
-// ── Transliteracja ──────────────────────────────────────────────────────────
-
 const SIMPLE_MAP = {
   'А':'A','а':'a','Б':'B','б':'b','В':'V','в':'v','Г':'H','г':'h',
   'Ґ':'G','ґ':'g','Д':'D','д':'d','Е':'E','е':'e','Ж':'Zh','ж':'zh',
@@ -371,297 +149,15 @@ function transliterate(text) {
       out.push((ch==='З'?'Z':'z') + (text[i+1]==='Г'?'GH':'gh'));
       i++; continue;
     }
-    if (ch in SIMPLE_MAP) { out.push(SIMPLE_MAP[ch]); }
-    else if (ch in CONTEXT_MAP) { out.push(CONTEXT_MAP[ch][isLetter(text[i-1])?1:0]); }
-    else { out.push(ch); }
+    if (ch in SIMPLE_MAP) out.push(SIMPLE_MAP[ch]);
+    else if (ch in CONTEXT_MAP) out.push(CONTEXT_MAP[ch][isLetter(text[i-1])?1:0]);
+    else out.push(ch);
   }
   return out.join('');
 }
 
-// ── VCF processing ─────────────────────────────────────────────────────────
-
-const TRANSLIT_FIELDS = new Set(['FN','N','ORG','TITLE','ROLE','NICKNAME','NOTE','ADR','LABEL','CATEGORIES']);
-const INFO_FIELDS = new Set(['TEL','EMAIL','URL','BDAY','IMPP','GEO','PHOTO']);
-
-function shouldTranslit(name) {
-  return TRANSLIT_FIELDS.has(name.toUpperCase()) || name.toUpperCase().startsWith('X-');
-}
-
-function decodeQP(val) {
-  const cleaned = val.replace(/=\r?\n/g,'');
-  const bytes = [];
-  for (let j = 0; j < cleaned.length; j++) {
-    if (cleaned[j]==='=' && /[0-9A-Fa-f]{2}/.test(cleaned.slice(j+1,j+3))) {
-      bytes.push(parseInt(cleaned.slice(j+1,j+3),16)); j+=2;
-    } else { bytes.push(cleaned.charCodeAt(j)); }
-  }
-  return new TextDecoder().decode(new Uint8Array(bytes));
-}
-
-// Combined: process + parse into structured contacts in one pass
-function processAndParse(text) {
-  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
-  const unfolded = [];
-  for (const l of lines) {
-    if (l.length && (l[0]===' '||l[0]==='\t') && unfolded.length) {
-      unfolded[unfolded.length-1] += l.slice(1);
-    } else { unfolded.push(l); }
-  }
-
-  const contacts = [];
-  let current = null;
-  let totalContacts = 0, totalChanged = 0;
-
-  for (const raw of unfolded) {
-    const upper = raw.toUpperCase().trim();
-    if (upper === 'BEGIN:VCARD') {
-      totalContacts++;
-      current = { lines: [] };
-    } else if (upper === 'END:VCARD') {
-      if (current) contacts.push(current);
-      current = null;
-    } else if (current && raw.trim()) {
-      const m = raw.match(/^([A-Z][A-Z0-9-]*)([;:])/i);
-      if (m) {
-        const col = raw.indexOf(':');
-        const fieldName = m[1].toUpperCase();
-        const params = raw.slice(0, col);
-        const rawValue = raw.slice(col + 1);
-        const isQP = params.toUpperCase().includes('QUOTED-PRINTABLE');
-
-        if (shouldTranslit(fieldName)) {
-          let transliterated, newParams = params, originalValue = rawValue;
-          if (isQP) {
-            originalValue = decodeQP(rawValue);
-            transliterated = transliterate(originalValue);
-            newParams = params
-              .replace(/;?ENCODING=QUOTED-PRINTABLE/gi,'')
-              .replace(/;?CHARSET=[A-Z0-9-]+/gi,'');
-          } else {
-            transliterated = transliterate(rawValue);
-          }
-          const wasTransliterated = transliterated !== originalValue;
-          if (wasTransliterated) totalChanged++;
-          current.lines.push({
-            fieldName, params: newParams,
-            value: transliterated,
-            wasTransliterated,
-            isInfo: false,
-          });
-        } else {
-          const isInfo = INFO_FIELDS.has(fieldName);
-          current.lines.push({
-            fieldName, params,
-            value: rawValue,
-            wasTransliterated: false,
-            isInfo,
-          });
-        }
-      } else {
-        current.lines.push({ fieldName: null, params: null, value: null, wasTransliterated: false, isInfo: false, raw });
-      }
-    }
-  }
-  return { contacts, totalContacts, totalChanged };
-}
-
-// Serialize structured contacts back to VCF text
-function serializeContacts(contacts) {
-  const out = [];
-  for (const c of contacts) {
-    out.push('BEGIN:VCARD');
-    for (const l of c.lines) {
-      if (l.fieldName !== null) {
-        out.push(`${l.params}:${l.value}`);
-      } else {
-        out.push(l.raw);
-      }
-    }
-    out.push('END:VCARD');
-  }
-  let result = out.join('\r\n');
-  if (!result.endsWith('\r\n')) result += '\r\n';
-  return result;
-}
-
-// Friendly value display: strip VCF encoding artifacts for info fields
-function displayValue(line) {
-  let v = line.value || '';
-  // TEL/EMAIL: strip type params from value if any crept in
-  v = v.replace(/^TYPE=[^:]+:/i, '');
-  return v;
-}
-
-// ── Contact list UI ─────────────────────────────────────────────────────────
-
-// Friendly labels for known VCF fields
-const FIELD_LABELS = {
-  FN: 'Imię i nazwisko',
-  N: 'Nazwisko;Imię',
-  ORG: 'Organizacja',
-  TITLE: 'Stanowisko',
-  ROLE: 'Rola',
-  NICKNAME: 'Pseudonim',
-  NOTE: 'Notatka',
-  ADR: 'Adres',
-  LABEL: 'Etykieta',
-  CATEGORIES: 'Kategorie',
-  TEL: 'Telefon',
-  EMAIL: 'E-mail',
-  URL: 'Strona www',
-  BDAY: 'Data urodzin',
-  VERSION: 'Wersja',
-};
-
-function fieldLabel(name) {
-  return FIELD_LABELS[name] || name;
-}
-
-function getInitials(fn) {
-  if (!fn) return '?';
-  const parts = fn.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
-  return fn.slice(0,2).toUpperCase();
-}
-
-function getMeta(contact) {
-  const tel = contact.lines.find(l => l.fieldName === 'TEL');
-  const email = contact.lines.find(l => l.fieldName === 'EMAIL');
-  const parts = [];
-  if (tel) parts.push(tel.value.replace(/^[^:]+:/, ''));
-  if (email) parts.push(email.value.replace(/^[^:]+:/, ''));
-  return parts.join(' · ');
-}
-
-let parsedContacts = [];
-
-function addDivider(fields, text) {
-  const d = document.createElement('div');
-  d.className = 'fields-divider';
-  d.textContent = text;
-  fields.appendChild(d);
-}
-
-function addEditableField(fields, li, ci, card) {
-  const row = document.createElement('div');
-  row.className = 'field-row';
-
-  const label = document.createElement('div');
-  label.className = 'field-label';
-  label.textContent = fieldLabel(li.fieldName);
-
-  const input = document.createElement('input');
-  input.className = 'field-input';
-  input.type = 'text';
-  input.value = li.value;
-  const orig = li.value;
-  input.addEventListener('input', () => {
-    li.value = input.value;
-    input.classList.toggle('modified', input.value !== orig);
-    if (li.fieldName === 'FN') {
-      const d = document.getElementById(`fn-display-${ci}`);
-      if (d) d.textContent = input.value || '(brak nazwy)';
-      const av = card.querySelector('.contact-avatar');
-      if (av) av.textContent = getInitials(input.value);
-    }
-  });
-
-  row.appendChild(label);
-  row.appendChild(input);
-  fields.appendChild(row);
-}
-
-function addStaticField(fields, li) {
-  const row = document.createElement('div');
-  row.className = 'field-row';
-
-  const label = document.createElement('div');
-  label.className = 'field-label';
-  label.textContent = fieldLabel(li.fieldName);
-
-  const val = document.createElement('div');
-  val.className = 'field-value-static';
-  val.textContent = displayValue(li);
-
-  row.appendChild(label);
-  row.appendChild(val);
-  fields.appendChild(row);
-}
-
-function renderContactList(contacts) {
-  const list = document.getElementById('contactsList');
-  list.innerHTML = '';
-
-  for (let ci = 0; ci < contacts.length; ci++) {
-    const c = contacts[ci];
-    const fnLine = c.lines.find(l => l.fieldName === 'FN');
-    const fn = fnLine ? fnLine.value : '(brak nazwy)';
-    const translitLines = c.lines.filter(l => l.wasTransliterated);
-    const infoLines = c.lines.filter(l => l.isInfo);
-    const hasTranslit = translitLines.length > 0;
-
-    const card = document.createElement('div');
-    card.className = 'contact-card' + (hasTranslit ? '' : ' no-translit');
-    card.dataset.ci = ci;
-
-    // Badge count
-    const badge = hasTranslit ? `<span class="translit-badge">${translitLines.length}</span>` : '';
-
-    const summary = document.createElement('div');
-    summary.className = 'contact-summary';
-    summary.innerHTML = `
-      <div class="contact-avatar${hasTranslit ? '' : ' avatar-muted'}">${getInitials(fn)}</div>
-      <div class="contact-main">
-        <div class="contact-fn" id="fn-display-${ci}">${escHtml(fn)}${badge}</div>
-        <div class="contact-meta">${escHtml(getMeta(c))}</div>
-      </div>
-      <span class="contact-toggle">▼</span>
-    `;
-    summary.addEventListener('click', () => card.classList.toggle('expanded'));
-
-    const fields = document.createElement('div');
-    fields.className = 'contact-fields';
-
-    if (hasTranslit) {
-      addDivider(fields, 'Przetłumaczone — sprawdź i popraw');
-      for (const li of translitLines) addEditableField(fields, li, ci, card);
-    }
-
-    if (infoLines.length) {
-      addDivider(fields, 'Informacje kontaktowe');
-      for (const li of infoLines) addStaticField(fields, li);
-    }
-
-    if (!hasTranslit && !infoLines.length) {
-      addDivider(fields, 'Brak pól do transliteracji');
-    }
-
-    card.appendChild(summary);
-    card.appendChild(fields);
-    list.appendChild(card);
-  }
-}
-
-function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// Search filter
-document.getElementById('contactsSearch').addEventListener('input', function() {
-  const q = this.value.toLowerCase();
-  const cards = document.querySelectorAll('.contact-card');
-  cards.forEach(card => {
-    const ci = parseInt(card.dataset.ci);
-    const c = parsedContacts[ci];
-    const fn = (c.lines.find(l => l.fieldName === 'FN') || {}).value || '';
-    const org = (c.lines.find(l => l.fieldName === 'ORG') || {}).value || '';
-    card.style.display = (fn.toLowerCase().includes(q) || org.toLowerCase().includes(q)) ? '' : 'none';
-  });
-});
-
-// ── UI logic ────────────────────────────────────────────────────────────────
-
 let currentFile = null;
+let outputBlob = null;
 let outputName = '';
 
 const dropZone   = document.getElementById('dropZone');
@@ -673,8 +169,6 @@ const removeBtn  = document.getElementById('removeBtn');
 const convertBtn = document.getElementById('convertBtn');
 const downloadBtn= document.getElementById('downloadBtn');
 const statusEl   = document.getElementById('status');
-const statsEl    = document.getElementById('stats');
-const contactsWrap = document.getElementById('contactsWrap');
 
 function formatSize(n) {
   if (n < 1024) return n + ' B';
@@ -688,7 +182,7 @@ function setFile(file) {
   fileSize.textContent = formatSize(file.size);
   fileInfo.classList.add('visible');
   convertBtn.disabled = false;
-  hideResults();
+  reset();
 }
 
 function clearFile() {
@@ -696,14 +190,12 @@ function clearFile() {
   fileInput.value = '';
   fileInfo.classList.remove('visible');
   convertBtn.disabled = true;
-  hideResults();
+  reset();
 }
 
-function hideResults() {
-  parsedContacts = [];
+function reset() {
+  outputBlob = null;
   statusEl.className = 'status';
-  statsEl.classList.remove('visible');
-  contactsWrap.classList.remove('visible');
   downloadBtn.style.display = 'none';
 }
 
@@ -714,40 +206,31 @@ function showStatus(msg, type) {
 
 fileInput.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
 removeBtn.addEventListener('click', clearFile);
-
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('hover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
 dropZone.addEventListener('drop', e => {
   e.preventDefault();
   dropZone.classList.remove('hover');
-  const f = e.dataTransfer.files[0];
-  if (f) setFile(f);
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
 });
 
 convertBtn.addEventListener('click', () => {
   if (!currentFile) return;
-  hideResults();
+  reset();
   convertBtn.disabled = true;
   convertBtn.textContent = '⏳ Przetwarzam…';
 
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const text = e.target.result;
-      const { contacts, totalContacts, totalChanged } = processAndParse(text);
-      parsedContacts = contacts;
-
-      const base = currentFile.name.replace(/\.[^.]+$/, '');
-      outputName = base + '_transliterated.vcf';
-
-      document.getElementById('statContacts').textContent = totalContacts;
-      document.getElementById('statFields').textContent = totalChanged;
-      statsEl.classList.add('visible');
-
-      renderContactList(parsedContacts);
-      contactsWrap.classList.add('visible');
-
-      showStatus(`Przetłumaczono ${totalChanged} pól w ${totalContacts} kontaktach. Sprawdź i popraw wpisy poniżej.`, 'ok');
+      const result = transliterate(e.target.result);
+      outputBlob = new Blob([result], { type: currentFile.type || 'text/plain' });
+      const ext = currentFile.name.includes('.') ? '' : '';
+      const base = currentFile.name.replace(/(\.[^.]+)$/, '_transliterated$1');
+      outputName = base === currentFile.name
+        ? currentFile.name.replace(/(\.[^.]+)$/, '_transliterated$1') || currentFile.name + '_transliterated'
+        : base;
+      showStatus('Gotowe.', 'ok');
       downloadBtn.style.display = 'flex';
     } catch(err) {
       showStatus('Błąd: ' + err.message, 'err');
@@ -764,11 +247,9 @@ convertBtn.addEventListener('click', () => {
 });
 
 downloadBtn.addEventListener('click', () => {
-  if (!parsedContacts.length) return;
-  const output = serializeContacts(parsedContacts);
-  const blob = new Blob([output], { type: 'text/vcard;charset=utf-8' });
+  if (!outputBlob) return;
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(outputBlob);
   a.download = outputName;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
