@@ -215,7 +215,7 @@
 const APPLE_X = /^(X-AB|X-SOCIALPROFILE|X-MAIDENNAME|X-ABADR|X-ABDATE)/i;
 
 // Fields kept in VCF 2.1 feature-phone mode
-const V21_KEEP = new Set(['N', 'TEL', 'EMAIL']);
+const V21_KEEP = new Set(['N', 'FN', 'TEL', 'EMAIL']);
 
 function isAppleXField(name) {
   return APPLE_X.test(name);
