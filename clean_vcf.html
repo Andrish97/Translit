@@ -221,78 +221,118 @@ function isAppleXField(name) {
   return APPLE_X.test(name);
 }
 
-function cleanVCF(text, opts) {
-  // Normalize line endings to LF for processing
+function unfold(text) {
   const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-
-  // Unfold continuation lines (RFC 6350)
-  const unfolded = [];
+  const out = [];
   for (const l of lines) {
-    if (l.length && (l[0] === ' ' || l[0] === '\t') && unfolded.length) {
-      unfolded[unfolded.length - 1] += l.slice(1);
-    } else {
-      unfolded.push(l);
-    }
+    if (l.length && (l[0] === ' ' || l[0] === '\t') && out.length) {
+      out[out.length - 1] += l.slice(1);
+    } else { out.push(l); }
+  }
+  return out;
+}
+
+function fieldValue(line) {
+  const col = line.indexOf(':');
+  return col >= 0 ? line.slice(col + 1) : '';
+}
+
+function fieldName(line) {
+  const m = line.match(/^(?:item\d+\.)?([A-Z][A-Z0-9-]*)/i);
+  return m ? m[1].toUpperCase() : '';
+}
+
+function fieldGroup(line) {
+  const m = line.match(/^(item\d+\.)/i);
+  return m ? m[1] : '';
+}
+
+// ── VCF 2.1 conversion (card-level) ────────────────────────────────────────
+function cleanV21(text) {
+  const unfolded = unfold(text);
+  const cards = [];
+  let cur = null;
+  for (const line of unfolded) {
+    const u = line.toUpperCase().trim();
+    if (u === 'BEGIN:VCARD') { cur = []; }
+    else if (u === 'END:VCARD') { if (cur) cards.push(cur); cur = null; }
+    else if (cur && line.trim()) cur.push(line);
   }
 
-  let contacts = 0;
   let removedLines = 0;
-  let flattenedFields = 0;
+  const outCards = [];
+
+  for (const card of cards) {
+    // Collect FN and TEL/EMAIL lines
+    let fn = '';
+    const tels = [], emails = [];
+
+    for (const line of card) {
+      const name = fieldName(line);
+      const grp  = fieldGroup(line);
+      const stripped = grp ? line.slice(grp.length) : line;
+      const val = fieldValue(stripped);
+
+      if (name === 'FN')    { fn = val; }
+      else if (name === 'TEL')   { tels.push('TEL:' + val); }
+      else if (name === 'EMAIL') { emails.push('EMAIL:' + val); }
+      else { removedLines++; }
+    }
+
+    // Use FN as display name; fall back to building from N if FN absent
+    if (!fn) {
+      const nLine = card.find(l => fieldName(l) === 'N');
+      if (nLine) {
+        const parts = fieldValue(nLine).split(';');
+        fn = [parts[1], parts[0]].filter(Boolean).join(' ').trim();
+      }
+    }
+
+    const cardLines = ['BEGIN:VCARD', 'VERSION:2.1'];
+    // Put full name in N first-component — most compatible with old phones
+    cardLines.push('N:' + (fn || '') + ';;;;');
+    if (fn) cardLines.push('FN:' + fn);
+    cardLines.push(...tels, ...emails);
+    cardLines.push('END:VCARD');
+    outCards.push(cardLines);
+  }
+
+  const flattenedFields = 0; // not tracked separately in v21 mode
+  return { outCards, contacts: cards.length, removedLines, flattenedFields };
+}
+
+// ── Main cleaner ────────────────────────────────────────────────────────────
+function cleanVCF(text, opts) {
+  if (opts.v21) {
+    const { outCards, contacts, removedLines, flattenedFields } = cleanV21(text);
+    const eol = '\r\n';
+    const result = outCards.map(c => c.join(eol)).join(eol) + eol;
+    return { result, contacts, removedLines, flattenedFields };
+  }
+
+  const unfolded = unfold(text);
+  let contacts = 0, removedLines = 0, flattenedFields = 0;
   const out = [];
 
   for (const line of unfolded) {
     const upper = line.toUpperCase().trim();
-
     if (upper === 'BEGIN:VCARD') { contacts++; out.push(line); continue; }
     if (upper === 'END:VCARD')   { out.push(line); continue; }
     if (!line.trim())            { continue; }
 
-    // Parse field name (handle item. group prefix)
-    const m = line.match(/^(item\d+\.)?([A-Z][A-Z0-9-]*)(;|:)/i);
-    const group     = m ? m[1] || '' : '';
-    const rawName   = m ? m[2] : '';
-    const fieldName = rawName.toUpperCase();
+    const grp  = fieldGroup(line);
+    const name = fieldName(line);
 
-    // ── VCF 2.1 feature-phone mode ──────────────────────────────────────
-    if (opts.v21) {
-      // Replace VERSION line
-      if (fieldName === 'VERSION') { out.push('VERSION:2.1'); continue; }
-      // Drop everything except N, TEL, EMAIL (and BEGIN/END already handled)
-      if (!V21_KEEP.has(fieldName)) { removedLines++; continue; }
-      // Strip item. prefix if present (flatten)
-      const stripped = group ? line.slice(group.length) : line;
-      if (group) flattenedFields++;
-      // Strip type params to bare minimum: just keep TEL: or EMAIL:
-      const col = stripped.indexOf(':');
-      const value = col >= 0 ? stripped.slice(col + 1) : stripped;
-      const bare = fieldName + ':' + value;
-      out.push(bare);
-      continue;
-    }
-
-    // ── Normal mode ─────────────────────────────────────────────────────
-
-    if (opts.prodid && fieldName === 'PRODID') { removedLines++; continue; }
-
-    if (opts.xapple && isAppleXField(fieldName)) { removedLines++; continue; }
-
-    if (opts.xother && fieldName.startsWith('X-') && !isAppleXField(fieldName)) {
-      removedLines++; continue;
-    }
-
-    if (opts.flatten && group) {
-      out.push(line.slice(group.length));
-      flattenedFields++;
-      continue;
-    }
-
+    if (opts.prodid && name === 'PRODID') { removedLines++; continue; }
+    if (opts.xapple && isAppleXField(name)) { removedLines++; continue; }
+    if (opts.xother && name.startsWith('X-') && !isAppleXField(name)) { removedLines++; continue; }
+    if (opts.flatten && grp) { out.push(line.slice(grp.length)); flattenedFields++; continue; }
     out.push(line);
   }
 
   const eol = opts.crlf ? '\r\n' : '\n';
   let result = out.join(eol);
   if (!result.endsWith(eol)) result += eol;
-
   return { result, contacts, removedLines, flattenedFields };
 }
 
